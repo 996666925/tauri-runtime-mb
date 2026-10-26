@@ -23,11 +23,26 @@ fn wait_for<T>(rx: &mpsc::Receiver<T>) -> T {
     }
 }
 
+/// Engine location: the `MB132_DLL_DIR` directory when set, otherwise the
+/// development checkout next to the `mb132-sys` sources.
+fn engine_options() -> mb132::InitOptions {
+    let dll_path = mb132::sys::dll_path_from_env().unwrap_or_else(|| {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../mb132-sys/vendor")
+            .join(mb132::sys::DLL_NAME)
+    });
+
+    mb132::InitOptions {
+        dll_path,
+        ..Default::default()
+    }
+}
+
 #[test]
 #[ignore = "loads the bundled mb132 DLL and runs a Win32 message loop"]
 fn native_engine_preedit_commit_cancel_and_caret() {
     eprintln!("IME regression: initializing mb132");
-    miniblink::init(miniblink::InitOptions::default()).unwrap();
+    mb132::init(engine_options()).unwrap();
     eprintln!("IME regression: creating hidden host");
     let class = sys::wide("STATIC");
     let hwnd = unsafe {
@@ -49,8 +64,8 @@ fn native_engine_preedit_commit_cancel_and_caret() {
     assert_ne!(hwnd, 0);
     eprintln!("IME regression: creating view");
     let (tx, rx) = mpsc::channel();
-    let view = miniblink::WebViewBuilder::new(hwnd)
-        .bounds(miniblink::Rect::new(0, 0, 800, 600))
+    let view = mb132::WebViewBuilder::new(hwnd)
+        .bounds(mb132::Rect::new(0, 0, 800, 600))
         .initial_script(
             r#"
             window.fetch = function (url, options) {

@@ -5,9 +5,11 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
+readme.workspace = true
 
 [dependencies]
-miniblink = { workspace = true }
+mb132 = { workspace = true }
 tauri-runtime = { workspace = true }
 tauri-utils = { workspace = true }
 raw-window-handle = { workspace = true }

@@ -152,7 +152,7 @@ impl<T: UserEvent> RuntimeHandle<T> for MbRuntimeHandle<T> {
     }
 
     fn webview_version(&self) -> Result<String> {
-        Ok(format!("miniblink {}", miniblink::version()))
+        Ok(format!("miniblink {}", mb132::version()))
     }
 }
 

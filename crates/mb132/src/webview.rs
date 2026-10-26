@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use miniblink_sys as sys;
+use mb132_sys as sys;
 
 use crate::net::{self, NetJob, RequestAction, RequestHandler};
 use crate::{Error, Result, bool_to_c, cstr, from_cstr, wide};

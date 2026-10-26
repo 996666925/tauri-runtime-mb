@@ -5,13 +5,14 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+publish = false
 
 [build-dependencies]
-miniblink-sys = { workspace = true }
+mb132-sys = { workspace = true }
 tauri-build = { workspace = true }
 
 [dependencies]
-miniblink = { workspace = true }
+mb132 = { workspace = true }
 tauri-runtime-mb = { workspace = true }
 tauri = { workspace = true }
 serde = { version = "1", features = ["derive"] }

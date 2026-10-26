@@ -11,7 +11,7 @@
 
 #[cfg(not(all(windows, target_pointer_width = "64")))]
 compile_error!(
-    "miniblink-sys only supports 64-bit Windows: these bindings mirror the x64 ABI of `mb132_x64.dll` \
+    "mb132-sys only supports 64-bit Windows: these bindings mirror the x64 ABI of `mb132_x64.dll` \
      (pointer sized handles, `GetWindowLongPtrW`, ...)"
 );
 
@@ -308,11 +308,18 @@ pub struct mbSlist {
     pub next: *const mbSlist,
 }
 
-/// File name of the engine binary shipped in [`vendor_dir`].
+/// File name of the engine binary.
 pub const DLL_NAME: &str = "mb132_x64.dll";
 
-/// Directory shipped with this crate that holds the engine binaries
-/// (`<crate>/vendor`). The path is resolved at compile time.
-pub fn vendor_dir() -> std::path::PathBuf {
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("vendor")
+/// Environment variable that names the directory holding [`DLL_NAME`].
+///
+/// The value is read at runtime, so the engine location can be configured per
+/// machine or per deployment without rebuilding. Empty values are ignored.
+pub const DLL_DIR_ENV: &str = "MB132_DLL_DIR";
+
+/// Full path of the engine binary inside [`DLL_DIR_ENV`], if the variable is set.
+pub fn dll_path_from_env() -> Option<std::path::PathBuf> {
+    std::env::var_os(DLL_DIR_ENV)
+        .filter(|dir| !dir.is_empty())
+        .map(|dir| std::path::Path::new(&dir).join(DLL_NAME))
 }

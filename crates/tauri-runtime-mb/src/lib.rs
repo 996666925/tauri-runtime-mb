@@ -50,7 +50,9 @@ use crate::shared::Shared;
 /// `builder.runtime(MbInitAttrs::default())`.
 #[derive(Debug, Clone, Default)]
 pub struct MbInitAttrs {
-    /// Full path of `mb132_x64.dll`. Defaults to a sibling of the executable.
+    /// Full path of `mb132_x64.dll`. Defaults to the `MB132_DLL_DIR` directory
+    /// when that environment variable is set, otherwise to a sibling of the
+    /// executable.
     pub dll_path: Option<PathBuf>,
     /// Enable the Node.js integration of the engine.
     pub nodejs: bool,
@@ -86,13 +88,13 @@ impl<T: UserEvent> std::fmt::Debug for MbRuntime<T> {
 impl<T: UserEvent> MbRuntime<T> {
     fn create(args: RuntimeInitArgs<MbInitAttrs>) -> Result<Self> {
         let attrs = args.runtime_init_attrs;
-        let options = miniblink::InitOptions {
-            dll_path: attrs.dll_path.unwrap_or_else(miniblink::default_dll_path),
+        let options = mb132::InitOptions {
+            dll_path: attrs.dll_path.unwrap_or_else(mb132::default_dll_path),
             nodejs: attrs.nodejs,
             config: attrs.config,
         };
 
-        miniblink::init(options).map_err(|error| Error::CreateWebview(Box::new(error)))?;
+        mb132::init(options).map_err(|error| Error::CreateWebview(Box::new(error)))?;
 
         let shared = Arc::new(Shared::new(args.identifier));
         shared.ensure_message_window();

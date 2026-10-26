@@ -220,5 +220,5 @@ pub fn is_initialized() -> bool {
 /// Returns the export table, panicking when the engine has not been initialized.
 #[track_caller]
 pub fn expect_api() -> &'static Api {
-    API.get().expect("miniblink is not initialized; call miniblink::init() first")
+    API.get().expect("mb132 is not initialized; call mb132::init() first")
 }

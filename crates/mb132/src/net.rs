@@ -6,7 +6,7 @@
 
 use std::ffi::c_void;
 
-use miniblink_sys as sys;
+use mb132_sys as sys;
 
 /// An intercepted request.
 #[derive(Debug, Clone)]

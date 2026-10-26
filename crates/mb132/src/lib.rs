@@ -5,8 +5,8 @@
 //! to serve `tauri://localhost`) and push input events.
 //!
 //! ```no_run
-//! let webview = miniblink::WebViewBuilder::new(hwnd)
-//!     .bounds(miniblink::Rect::new(0, 0, 1024, 768))
+//! let webview = mb132::WebViewBuilder::new(hwnd)
+//!     .bounds(mb132::Rect::new(0, 0, 1024, 768))
 //!     .url("http://tauri.localhost/")
 //!     .build()
 //!     .unwrap();
@@ -17,7 +17,7 @@
 pub mod net;
 pub mod webview;
 
-pub use miniblink_sys as sys;
+pub use mb132_sys as sys;
 pub use net::{NetJob, Request, RequestAction, RequestHandler, Response};
 pub use webview::{Handlers, Rect, WebView, WebViewBuilder};
 
@@ -72,11 +72,17 @@ impl Default for InitOptions {
 
 /// Locates the engine library, in this order:
 ///
-/// 1. next to the current executable (how it is shipped),
-/// 2. in the working directory,
-/// 3. in the `vendor` directory bundled with `miniblink-sys` (dev builds).
+/// 1. the directory named by the `MB132_DLL_DIR` environment variable
+///    (see [`mb132_sys::DLL_DIR_ENV`]),
+/// 2. next to the current executable (how it is shipped),
+/// 3. in the working directory,
+/// 4. the bare file name, resolved by the system loader (for example `PATH`).
 pub fn default_dll_path() -> PathBuf {
-    let name = miniblink_sys::DLL_NAME;
+    if let Some(configured) = mb132_sys::dll_path_from_env() {
+        return configured;
+    }
+
+    let name = mb132_sys::DLL_NAME;
 
     if let Ok(exe) = std::env::current_exe()
         && let Some(dir) = exe.parent()
@@ -92,11 +98,6 @@ pub fn default_dll_path() -> PathBuf {
         if candidate.exists() {
             return candidate;
         }
-    }
-
-    let bundled = miniblink_sys::vendor_dir().join(name);
-    if bundled.exists() {
-        return bundled;
     }
 
     PathBuf::from(name)

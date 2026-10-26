@@ -10,9 +10,9 @@
 
 ```text
 crates/
-  miniblink-sys/      mb132 的 FFI 声明与 DLL 动态加载
+  mb132-sys/          mb132 的 FFI 声明与 DLL 动态加载
     vendor/          mb132_x64.dll
-  miniblink/          引擎初始化、WebView、脚本执行与网络拦截封装
+  mb132/              引擎初始化、WebView、脚本执行与网络拦截封装
   tauri-runtime-mb/   Tauri Runtime、原生窗口、输入与 IPC 适配
 examples/
   miniblink-app/      可直接运行的 Tauri 示例
@@ -36,7 +36,7 @@ Tauri 运行时当前采用离屏渲染：Miniblink 生成绘制表面，宿主�
 - Windows 10 / 11，x64。当前绑定不支持 Windows x86、ARM64、Linux 或 macOS。
 - Rust 1.95 或更新版本，使用 `x86_64-pc-windows-msvc` 工具链。
 - Visual Studio Build Tools 的 C++ 桌面开发组件和 Windows SDK。
-- 引擎文件 `crates/miniblink-sys/vendor/mb132_x64.dll`。
+- 引擎文件 `crates/mb132-sys/vendor/mb132_x64.dll`。
 
 项目使用 Rust 2024 edition 和 Tauri 3 alpha API。请保留仓库的 `Cargo.lock`；Tauri 2 的接入示例不能直接照搬。
 
@@ -62,18 +62,20 @@ cargo build -p miniblink-app --release --locked --target-dir target
 
 ## 接入 Tauri 应用
 
-可先参考 [示例 Cargo.toml](examples/miniblink-app/Cargo.toml)、[构建脚本](examples/miniblink-app/build.rs) 和 [应用入口](examples/miniblink-app/src/main.rs)。以下为使用本地源码依赖的最小接入方式。
+可先参考 [示例 Cargo.toml](examples/miniblink-app/Cargo.toml)、[构建脚本](examples/miniblink-app/build.rs) 和 [应用入口](examples/miniblink-app/src/main.rs)。
 
-在应用的 `Cargo.toml` 中添加依赖，按实际目录修改 `path`：
+`tauri-runtime-mb` 已发布到 crates.io，在应用的 `Cargo.toml` 中添加依赖：
 
 ```toml
 [dependencies]
 tauri = "3.0.0-alpha.4"
-tauri-runtime-mb = { path = "../tauri-runtime-mb/crates/tauri-runtime-mb" }
+tauri-runtime-mb = "0.0.1"
 
 [build-dependencies]
 tauri-build = "3.0.0-alpha.4"
 ```
+
+也可以改用本地源码依赖，把 `tauri-runtime-mb = "0.0.1"` 换成 `{ path = "../tauri-runtime-mb/crates/tauri-runtime-mb" }`。
 
 应用需要正常的 Tauri 配置、前端资源和 `build.rs`：
 
@@ -121,10 +123,16 @@ fn main() {
 
 默认按以下顺序查找 DLL：
 
-1. 当前可执行文件所在目录。
-2. 当前工作目录。
-3. `miniblink-sys` 源码中的 `vendor` 目录，供开发时使用。
+1. 环境变量 `MB132_DLL_DIR` 指定的目录（值为空时忽略）。
+2. 当前可执行文件所在目录。
+3. 当前工作目录。
 4. 若上述路径均不存在，将 DLL 名称交给系统加载器处理。
+
+`MB132_DLL_DIR` 在运行时读取，适合按机器或部署位置调整引擎路径，无需重新编译：
+
+```powershell
+$env:MB132_DLL_DIR = "D:\my-app\engine"
+```
 
 发布时建议保持以下目录结构，不依赖开发机的源码路径：
 
@@ -167,7 +175,7 @@ Remove-Item Env:MB_TRACE
 
 当前实现尚不能作为 Wry Runtime 的完整替代，主要限制包括：
 
-- **HTML 加载**：直接使用 `miniblink::WebViewBuilder::html` 或 `WebView::load_html` 时应提供有效的 base URL。传入 `None` 在随附引擎上已复现访问冲突。
+- **HTML 加载**：直接使用 `mb132::WebViewBuilder::html` 或 `WebView::load_html` 时应提供有效的 base URL。传入 `None` 在随附引擎上已复现访问冲突。
 - **线程调度**：部分窗口和 WebView 操作仍直接调用原生 API。例如从工作线程调用窗口 `destroy()`，可能返回成功但窗口未被销毁。此类操作应通过 `run_on_main_thread` 调度。
 - **退出流程**：关闭最后一个窗口并阻止退出后，后续显式退出请求可能被忽略。托盘常驻等场景需要额外验证。
 - **多 WebView**：同一窗口中的子 WebView 输入路由尚不完整，当前优先使用单窗口单 WebView。

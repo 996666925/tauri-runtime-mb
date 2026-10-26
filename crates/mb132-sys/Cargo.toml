@@ -1,10 +1,15 @@
 [package]
-name = "miniblink-sys"
+name = "mb132-sys"
 description = "Raw FFI bindings for the Miniblink (mb132) browser engine"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
+readme.workspace = true
+# The engine binary is 75 MB and is deployed by the application, so it is not
+# part of the published package.
+exclude = ["vendor/"]
 
 [dependencies]
 libloading = { workspace = true }

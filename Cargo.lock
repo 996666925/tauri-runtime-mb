@@ -1246,6 +1246,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "mb132"
+version = "0.0.1"
+dependencies = [
+ "mb132-sys",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "mb132-sys"
+version = "0.0.1"
+dependencies = [
+ "libloading",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1258,31 +1273,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 
 [[package]]
-name = "miniblink"
-version = "0.1.0"
-dependencies = [
- "miniblink-sys",
- "thiserror 2.0.21",
-]
-
-[[package]]
 name = "miniblink-app"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
- "miniblink",
- "miniblink-sys",
+ "mb132",
+ "mb132-sys",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-runtime-mb",
-]
-
-[[package]]
-name = "miniblink-sys"
-version = "0.1.0"
-dependencies = [
- "libloading",
 ]
 
 [[package]]
@@ -2311,11 +2311,11 @@ dependencies = [
 
 [[package]]
 name = "tauri-runtime-mb"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "cookie",
  "http",
- "miniblink",
+ "mb132",
  "raw-window-handle",
  "serde_json",
  "tauri-runtime",

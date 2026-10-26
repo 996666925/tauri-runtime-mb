@@ -3,15 +3,17 @@ resolver = "3"
 members = ["crates/*", "examples/*"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.0.1"
 edition = "2024"
 rust-version = "1.95"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/996666925/tauri-runtime-mb"
+readme = "README.md"
 
 [workspace.dependencies]
-miniblink-sys = { path = "crates/miniblink-sys" }
-miniblink = { path = "crates/miniblink" }
-tauri-runtime-mb = { path = "crates/tauri-runtime-mb" }
+mb132-sys = { version = "0.0.1", path = "crates/mb132-sys" }
+mb132 = { version = "0.0.1", path = "crates/mb132" }
+tauri-runtime-mb = { version = "0.0.1", path = "crates/tauri-runtime-mb" }
 
 libloading = "0.8"
 thiserror = "2"

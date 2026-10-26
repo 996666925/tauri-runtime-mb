@@ -35,7 +35,7 @@ pub struct MbPlatformWebview {
 pub(crate) struct WebviewInner<T: UserEvent> {
     pub(crate) label: String,
     pub(crate) window: Arc<WindowInner<T>>,
-    pub(crate) webview: miniblink::WebView,
+    pub(crate) webview: mb132::WebView,
     pub(crate) handlers: Mutex<HashMap<WebviewEventId, WebviewEventHandler>>,
     pub(crate) auto_resize: AtomicBool,
     pub(crate) bounds: Mutex<(i32, i32, u32, u32)>,
@@ -90,7 +90,7 @@ impl<T: UserEvent> WebviewInner<T> {
 
         // viewport == physical client area
         self.webview
-            .set_bounds(miniblink::Rect::new(x, y, width, height));
+            .set_bounds(mb132::Rect::new(x, y, width, height));
     }
 
     /// Handle of the window owned by the engine (0 in offscreen mode).
@@ -179,9 +179,9 @@ struct WebviewNet<T: UserEvent> {
 
 fn to_miniblink_response(
     response: http::Response<std::borrow::Cow<'static, [u8]>>,
-) -> miniblink::Response {
+) -> mb132::Response {
     let (parts, body) = response.into_parts();
-    let mut result = miniblink::Response {
+    let mut result = mb132::Response {
         status: parts.status.as_u16(),
         headers: Vec::new(),
         mime: None,
@@ -199,13 +199,13 @@ fn to_miniblink_response(
     result
 }
 
-impl<T: UserEvent> miniblink::RequestHandler for WebviewNet<T> {
-    fn on_request(&self, request: miniblink::Request) -> miniblink::RequestAction {
+impl<T: UserEvent> mb132::RequestHandler for WebviewNet<T> {
+    fn on_request(&self, request: mb132::Request) -> mb132::RequestAction {
         let Some((scheme, path)) = split_custom_url(&request.url) else {
             if trace_enabled() {
                 eprintln!("[mb] pass-through {}", request.url);
             }
-            return miniblink::RequestAction::Continue;
+            return mb132::RequestAction::Continue;
         };
 
         if trace_enabled() {
@@ -234,7 +234,7 @@ impl<T: UserEvent> miniblink::RequestHandler for WebviewNet<T> {
                     }
                 }));
             }
-            return miniblink::RequestAction::Respond(miniblink::Response::ok(
+            return mb132::RequestAction::Respond(mb132::Response::ok(
                 Vec::new(),
                 "text/plain",
             ));
@@ -253,7 +253,7 @@ impl<T: UserEvent> miniblink::RequestHandler for WebviewNet<T> {
             if scheme == "ipc" {
                 return self.handle_ipc(request);
             }
-            return miniblink::RequestAction::Continue;
+            return mb132::RequestAction::Continue;
         };
 
         let mut builder = http::Request::builder()
@@ -265,7 +265,7 @@ impl<T: UserEvent> miniblink::RequestHandler for WebviewNet<T> {
         let Ok(http_request) = builder.body(request.body.clone()) else {
             // Put the handler back and let the network stack deal with it.
             self.protocols.lock().unwrap().insert(scheme, handler);
-            return miniblink::RequestAction::Continue;
+            return mb132::RequestAction::Continue;
         };
 
         let (tx, rx) = std::sync::mpsc::channel();
@@ -293,7 +293,7 @@ impl<T: UserEvent> miniblink::RequestHandler for WebviewNet<T> {
                         String::from_utf8_lossy(response.body())
                     );
                 }
-                miniblink::RequestAction::Respond(to_miniblink_response(response))
+                mb132::RequestAction::Respond(to_miniblink_response(response))
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {
                 let job = request.job;
@@ -303,10 +303,10 @@ impl<T: UserEvent> miniblink::RequestHandler for WebviewNet<T> {
                         job.respond_async(to_miniblink_response(response));
                     }
                 });
-                miniblink::RequestAction::Hold
+                mb132::RequestAction::Hold
             }
             Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                miniblink::RequestAction::Continue
+                mb132::RequestAction::Continue
             }
         }
     }
@@ -318,7 +318,7 @@ pub(crate) fn trace_enabled() -> bool {
 }
 
 impl<T: UserEvent> WebviewNet<T> {
-    fn handle_ipc(&self, request: miniblink::Request) -> miniblink::RequestAction {
+    fn handle_ipc(&self, request: mb132::Request) -> mb132::RequestAction {
         if trace_enabled() {
             eprintln!("[mb] ipc body_len={}", request.body.len());
         }
@@ -327,7 +327,7 @@ impl<T: UserEvent> WebviewNet<T> {
             handler.take()
         };
         let Some(handler) = handler else {
-            return miniblink::RequestAction::Continue;
+            return mb132::RequestAction::Continue;
         };
 
         let inner = self.self_ref.lock().unwrap().upgrade();
@@ -369,8 +369,8 @@ impl<T: UserEvent> WebviewNet<T> {
         // keep it around for the next message.
         *self.ipc_handler.lock().unwrap() = Some(handler);
 
-        miniblink::RequestAction::Respond(
-            miniblink::Response::ok(Vec::new(), "application/json")
+        mb132::RequestAction::Respond(
+            mb132::Response::ok(Vec::new(), "application/json")
                 .with_header("Access-Control-Allow-Origin", "*"),
         )
     }
@@ -463,13 +463,13 @@ pub(crate) fn create_webview_in_window<T: UserEvent>(
     // The engine sizes the render surface exactly as told (it does not scale it
     // by the device factor), so the viewport has to be the physical client
     // area: that keeps the page filling the window and mouse coordinates 1:1.
-    let mut builder = miniblink::WebViewBuilder::new(hwnd)
-        .bounds(miniblink::Rect::new(x, y, width, height))
+    let mut builder = mb132::WebViewBuilder::new(hwnd)
+        .bounds(mb132::Rect::new(x, y, width, height))
         .transparent(attributes.transparent)
         .device_scale_factor(1.0)
         .initial_script(crate::ime::SCRIPT)
         .url(url.clone())
-        .request_handler(Arc::clone(&net) as Arc<dyn miniblink::RequestHandler>);
+        .request_handler(Arc::clone(&net) as Arc<dyn mb132::RequestHandler>);
 
     if let Some(user_agent) = &attributes.user_agent {
         builder = builder.user_agent(user_agent.clone());

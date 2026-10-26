@@ -1,11 +1,13 @@
 [package]
-name = "miniblink"
+name = "mb132"
 description = "Safe, minimal Rust wrapper around the Miniblink browser engine"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
+readme.workspace = true
 
 [dependencies]
-miniblink-sys = { workspace = true }
+mb132-sys = { workspace = true }
 thiserror = { workspace = true }

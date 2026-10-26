@@ -14,7 +14,7 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 fn engine() -> serde_json::Value {
     serde_json::json!({
-        "engine": miniblink::version(),
+        "engine": mb132::version(),
         "runtime": "tauri-runtime-mb",
     })
 }

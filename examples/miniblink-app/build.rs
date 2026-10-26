@@ -12,11 +12,12 @@ fn main() {
 /// Copies the engine next to the produced executable so the demo can be started
 /// with `cargo run`.
 ///
-/// The engine binary lives in `crates/miniblink-sys/vendor`; a release build
-/// ships it beside the executable (`miniblink::default_dll_path` looks there
-/// first).
+/// A release build ships the engine beside the executable
+/// (`mb132::default_dll_path` looks there). The source is taken from the
+/// `MB132_DLL_DIR` environment directory when set, otherwise from the
+/// development checkout in `crates/mb132-sys/vendor`.
 fn copy_engine() {
-    let source = miniblink_sys::vendor_dir().join(miniblink_sys::DLL_NAME);
+    let source = engine_source();
     if !source.exists() {
         println!(
             "cargo:warning=miniblink engine not found at {}",
@@ -41,5 +42,19 @@ fn copy_engine() {
     };
 
     println!("cargo:rerun-if-changed={}", source.display());
-    let _ = std::fs::copy(&source, profile_dir.join(miniblink_sys::DLL_NAME));
+    let _ = std::fs::copy(&source, profile_dir.join(mb132_sys::DLL_NAME));
+}
+
+/// Absolute path of the engine binary the demo should ship.
+fn engine_source() -> PathBuf {
+    println!(
+        "cargo:rerun-if-env-changed={}",
+        mb132_sys::DLL_DIR_ENV
+    );
+
+    mb132_sys::dll_path_from_env().unwrap_or_else(|| {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../crates/mb132-sys/vendor")
+            .join(mb132_sys::DLL_NAME)
+    })
 }
