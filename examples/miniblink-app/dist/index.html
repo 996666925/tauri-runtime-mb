@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Miniblink + Tauri</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #10131a;
+        --panel: #171b24;
+        --border: #262c39;
+        --text: #e6e9ef;
+        --muted: #8b93a7;
+        --accent: #4f8cff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle at 20% 0%, #1b2433 0%, var(--bg) 55%);
+        color: var(--text);
+        font: 15px/1.6 "Segoe UI", system-ui, sans-serif;
+      }
+      main {
+        width: min(620px, calc(100% - 48px));
+        padding: 32px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: color-mix(in srgb, var(--panel) 88%, transparent);
+      }
+      h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.02em; }
+      p.sub { margin: 0 0 24px; color: var(--muted); }
+      .row { display: flex; gap: 10px; }
+      input {
+        flex: 1;
+        padding: 10px 12px;
+        border-radius: 9px;
+        border: 1px solid var(--border);
+        background: #0d1016;
+        color: var(--text);
+        font: inherit;
+        outline: none;
+      }
+      input:focus { border-color: var(--accent); }
+      button {
+        padding: 10px 16px;
+        border: 0;
+        border-radius: 9px;
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover { filter: brightness(1.08); }
+      pre {
+        margin: 20px 0 0;
+        padding: 14px;
+        border-radius: 10px;
+        background: #0d1016;
+        border: 1px solid var(--border);
+        color: #9fe6b4;
+        font: 13px/1.5 "Cascadia Mono", ui-monospace, monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+        min-height: 84px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Miniblink runtime for Tauri</h1>
+      <p class="sub">This page is rendered by <code>mb132_x64.dll</code>, not WebView2.</p>
+
+      <div class="row">
+        <input id="name" value="miniblink" spellcheck="false" />
+        <button id="greet">Invoke</button>
+      </div>
+
+      <pre id="output">ready</pre>
+    </main>
+
+    <script>
+      const output = document.getElementById('output');
+
+      async function invoke(command, args) {
+        return window.__TAURI__.core.invoke(command, args);
+      }
+
+      async function greet() {
+        const name = document.getElementById('name').value;
+        try {
+          const info = await invoke('engine');
+          const reply = await invoke('greet', { name });
+          const view = window.innerWidth + 'x' + window.innerHeight + ' @' + window.devicePixelRatio + 'x';
+          output.textContent = reply + '\n' + JSON.stringify(info) + '\nviewport ' + view;
+        } catch (error) {
+          output.textContent = 'ipc error: ' + String(error);
+        }
+      }
+
+      document.getElementById('greet').addEventListener('click', greet);
+      greet();
+
+
+
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "examples/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+miniblink-sys = { path = "crates/miniblink-sys" }
+miniblink = { path = "crates/miniblink" }
+tauri-runtime-mb = { path = "crates/tauri-runtime-mb" }
+
+libloading = "0.8"
+thiserror = "2"
+serde_json = "1"
+http = "1"
+url = "2"
+cookie = "0.18"
+raw-window-handle = "0.6"
+windows = "0.62"
+tauri-runtime = "3.0.0-alpha.4"
+tauri-utils = "3.0.0-alpha.4"
+tauri = "3.0.0-alpha.4"
+tauri-build = "3.0.0-alpha.4"
+
+[profile.release]
+lto = true
+opt-level = "s"
+strip = true

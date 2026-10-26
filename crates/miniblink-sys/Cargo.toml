@@ -1,0 +1,10 @@
+[package]
+name = "miniblink-sys"
+description = "Raw FFI bindings for the Miniblink (mb132) browser engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+libloading = { workspace = true }
