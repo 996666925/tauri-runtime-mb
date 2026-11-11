@@ -29,7 +29,6 @@ const HWND_MESSAGE: isize = -3;
 const HWND_BOTTOM: isize = 1;
 const HWND_TOPMOST: isize = -1;
 const HWND_NOTOPMOST: isize = -2;
-const WM_NCLBUTTONDOWN: u32 = 0x00A1;
 const HTCAPTION: isize = 2;
 const MONITOR_DEFAULTTOPRIMARY: u32 = 1;
 
@@ -945,12 +944,18 @@ fn handle_message<T: UserEvent>(
             None
         }
         sys::WM_SETCURSOR => {
+            // Nonclient cursors belong to Windows, including all resize edges.
+            if (lparam as u16 as i16) as i32 != sys::HTCLIENT {
+                return None;
+            }
             if let Some(result) = forward(inner, hwnd, msg, wparam, lparam) {
                 return Some(result);
             }
             unsafe { sys::SetCursor(sys::LoadCursorW(0, sys::IDC_ARROW)) };
             Some(1)
         }
+        // Let Windows enter its native move/resize loop on a frame click.
+        sys::WM_NCLBUTTONDOWN => None,
         _ => forward(inner, hwnd, msg, wparam, lparam),
     }
 }
@@ -1567,13 +1572,49 @@ impl<T: UserEvent> WindowDispatch<T> for MbWindowDispatcher<T> {
         let hwnd = self.inner.hwnd();
         unsafe {
             sys::ReleaseCapture();
-            sys::SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION as usize, 0);
+            sys::SendMessageW(hwnd, sys::WM_NCLBUTTONDOWN, HTCAPTION as usize, 0);
         }
         Ok(())
     }
 
-    fn start_resize_dragging(&self, _direction: ResizeDirection) -> Result<()> {
-        Ok(())
+    fn start_resize_dragging(&self, direction: ResizeDirection) -> Result<()> {
+        let inner = Arc::clone(&self.inner);
+        self.inner.shared.run_on_main_thread(move || -> Result<()> {
+            let hwnd = inner.hwnd();
+            if inner.destroyed.load(Ordering::SeqCst)
+                || !inner.resizable.load(Ordering::SeqCst)
+                || !inner.enabled.load(Ordering::SeqCst)
+                || inner.fullscreen.load(Ordering::SeqCst)
+                || unsafe { sys::IsZoomed(hwnd) } != 0
+            {
+                return Ok(());
+            }
+            let hit = match direction {
+                ResizeDirection::East => sys::HTRIGHT,
+                ResizeDirection::North => sys::HTTOP,
+                ResizeDirection::NorthEast => sys::HTTOPRIGHT,
+                ResizeDirection::NorthWest => sys::HTTOPLEFT,
+                ResizeDirection::South => sys::HTBOTTOM,
+                ResizeDirection::SouthEast => sys::HTBOTTOMRIGHT,
+                ResizeDirection::SouthWest => sys::HTBOTTOMLEFT,
+                ResizeDirection::West => sys::HTLEFT,
+            };
+            let mut point = sys::POINT::default();
+            unsafe {
+                if sys::GetCursorPos(&mut point) == 0 {
+                    return Err(Error::FailedToGetCursorPosition);
+                }
+                sys::ReleaseCapture();
+                let position =
+                    (point.x as u16 as usize | ((point.y as u16 as usize) << 16)) as isize;
+                // Post instead of synchronously entering the modal resize loop:
+                // the IPC/main-thread task can finish before dragging begins.
+                if sys::PostMessageW(hwnd, sys::WM_NCLBUTTONDOWN, hit as usize, position) == 0 {
+                    return Err(Error::FailedToSendMessage);
+                }
+            }
+            Ok(())
+        })?
     }
 
     fn set_badge_count(&self, _count: Option<i64>, _desktop_filename: Option<String>) -> Result<()> {

@@ -236,6 +236,7 @@ pub const WM_MOUSEACTIVATE: u32 = 0x0021;
 pub const WM_GETMINMAXINFO: u32 = 0x0024;
 pub const WM_NCHITTEST: u32 = 0x0084;
 pub const WM_NCCALCSIZE: u32 = 0x0083;
+pub const WM_NCLBUTTONDOWN: u32 = 0x00A1;
 pub const WM_SYSCOMMAND: u32 = 0x0112;
 pub const WM_NCCREATE: u32 = 0x0081;
 pub const WM_NCDESTROY: u32 = 0x0082;

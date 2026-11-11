@@ -109,7 +109,7 @@ pub(crate) fn handle_message<T: UserEvent>(
     }
     let decorations = window.decorations.load(Ordering::SeqCst);
     let fullscreen = window.fullscreen.load(Ordering::SeqCst);
-    match message {
+    let result = match message {
         sys::WM_NCCALCSIZE if wparam != 0 && (!decorations || fullscreen) && lparam != 0 => {
             // SAFETY: WM_NCCALCSIZE with nonzero wParam provides NCCALCSIZE_PARAMS.
             let params = unsafe { &mut *(lparam as *mut sys::NCCALCSIZE_PARAMS) };
@@ -169,6 +169,11 @@ pub(crate) fn handle_message<T: UserEvent>(
             let dpi = unsafe { sys::GetDpiForWindow(hwnd) };
             let border_y = unsafe { sys::GetSystemMetricsForDpi(sys::SM_CYFRAME, dpi) };
             if window.shadow.load(Ordering::SeqCst) {
+                // Preserve the native side/bottom borders and their corners.
+                let native = unsafe { sys::DefWindowProcW(hwnd, message, wparam, lparam) };
+                if native != sys::HTCLIENT as isize {
+                    return Some(native);
+                }
                 let mut point = sys::POINT { x, y };
                 let mut rect = sys::RECT::default();
                 unsafe {
@@ -176,7 +181,14 @@ pub(crate) fn handle_message<T: UserEvent>(
                     sys::GetClientRect(hwnd, &mut rect);
                 }
                 if point.y >= 0 && point.y <= border_y && point.x >= 0 && point.x <= rect.right {
-                    Some(sys::HTTOP as isize)
+                    let border_x = unsafe { sys::GetSystemMetricsForDpi(sys::SM_CXFRAME, dpi) };
+                    Some(if point.x <= border_x {
+                        sys::HTTOPLEFT
+                    } else if point.x >= rect.right - border_x {
+                        sys::HTTOPRIGHT
+                    } else {
+                        sys::HTTOP
+                    } as isize)
                 } else {
                     None
                 }
@@ -188,7 +200,13 @@ pub(crate) fn handle_message<T: UserEvent>(
             }
         }
         _ => None,
-    }
+    };
+    // The host owns nonclient layout and hit testing, even with a webview.
+    // Passing an unhandled frame message into Miniblink can replace the
+    // native border/caption result with a client-area result.
+    Some(result.unwrap_or_else(|| unsafe {
+        sys::DefWindowProcW(hwnd, message, wparam, lparam)
+    }))
 }
 
 fn hit_test(rect: &sys::RECT, x: i32, y: i32, border_x: i32, border_y: i32) -> Option<isize> {
