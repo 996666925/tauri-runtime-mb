@@ -11,7 +11,7 @@ use tauri_runtime::webview::{
 };
 use tauri_runtime::window::{WebviewEvent, WindowId};
 use tauri_runtime::{
-    Cookie, Error, Result, RunEvent, UserEvent, WebviewDispatch, WebviewEventId,
+    Cookie, Error, Result, RunEvent, UserEvent, WebviewDispatch,
 };
 use tauri_utils::config::Color;
 use url::Url;
@@ -20,8 +20,6 @@ use crate::shared::Shared;
 use crate::sys;
 use crate::window::{physical_position, physical_size, WindowInner};
 use crate::MbRuntime;
-
-type WebviewEventHandler = Arc<Mutex<Box<dyn Fn(&WebviewEvent) + Send>>>;
 
 /// Handle to the underlying Miniblink view.
 #[derive(Debug, Clone, Copy)]
@@ -36,7 +34,6 @@ pub(crate) struct WebviewInner<T: UserEvent> {
     pub(crate) label: String,
     pub(crate) window: Arc<WindowInner<T>>,
     pub(crate) webview: mb132::WebView,
-    pub(crate) handlers: Mutex<HashMap<WebviewEventId, WebviewEventHandler>>,
     pub(crate) auto_resize: AtomicBool,
     pub(crate) bounds: Mutex<(i32, i32, u32, u32)>,
     pub(crate) use_https_scheme: bool,
@@ -150,17 +147,9 @@ impl<T: UserEvent> WebviewInner<T> {
         });
     }
 
-    /// Delivers a webview event to the registered listeners and to the run loop.
+    /// Sends a webview event to Tauri, which dispatches its registered listeners.
     #[allow(dead_code)]
     fn emit(&self, event: WebviewEvent) {
-        let handlers: Vec<WebviewEventHandler> = {
-            let handlers = self.handlers.lock().unwrap();
-            handlers.values().cloned().collect()
-        };
-        for handler in handlers {
-            let callback = handler.lock().unwrap();
-            callback(&event);
-        }
         self.window.shared.push_event(RunEvent::WebviewEvent {
             label: self.label.clone(),
             event,
@@ -554,7 +543,6 @@ pub(crate) fn create_webview_in_window<T: UserEvent>(
         label,
         window: Arc::clone(window),
         webview,
-        handlers: Mutex::new(HashMap::new()),
         auto_resize: AtomicBool::new(attributes.auto_resize || is_primary),
         bounds: Mutex::new((x, y, width as u32, height as u32)),
         use_https_scheme: attributes.use_https_scheme,
@@ -610,16 +598,6 @@ impl<T: UserEvent> WebviewDispatch<T> for MbWebviewDispatcher<T> {
     fn run_on_main_thread<F: FnOnce() + Send + 'static>(&self, f: F) -> Result<()> {
         self.inner.window.shared.post_task(Box::new(f));
         Ok(())
-    }
-
-    fn on_webview_event<F: Fn(&WebviewEvent) + Send + 'static>(&self, f: F) -> WebviewEventId {
-        let id = self.inner.window.shared.next_event_id();
-        self.inner
-            .handlers
-            .lock()
-            .unwrap()
-            .insert(id, Arc::new(Mutex::new(Box::new(f))));
-        id
     }
 
     fn with_webview<F: FnOnce(<Self::Runtime as tauri_runtime::Runtime<T>>::Webview) + Send + 'static>(

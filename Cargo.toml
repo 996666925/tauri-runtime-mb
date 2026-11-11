@@ -23,9 +23,9 @@ url = "2"
 cookie = "0.18"
 raw-window-handle = "0.6"
 windows = "0.62"
-tauri-runtime = "3.0.0-alpha.4"
+tauri-runtime = "3.0.0-alpha.5"
 tauri-utils = "3.0.0-alpha.4"
-tauri = "3.0.0-alpha.4"
+tauri = "3.0.0-alpha.6"
 tauri-build = "3.0.0-alpha.4"
 
 [profile.release]

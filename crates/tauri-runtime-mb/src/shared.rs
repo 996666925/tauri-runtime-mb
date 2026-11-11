@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use tauri_runtime::dpi::{PhysicalPosition, PhysicalRect, PhysicalSize};
 use tauri_runtime::monitor::Monitor;
-use tauri_runtime::window::{WindowEvent, WindowId};
+use tauri_runtime::window::WindowId;
 use tauri_runtime::{Error, Result, RunEvent, UserEvent};
 use tauri_utils::Theme;
 
@@ -14,7 +14,6 @@ use crate::sys;
 use crate::window::WindowInner;
 
 pub(crate) type Task = Box<dyn FnOnce() + Send>;
-pub(crate) type EventHandler = Arc<Mutex<Box<dyn Fn(&WindowEvent) + Send>>>;
 
 /// State owned by the runtime and shared with all of its handles.
 pub(crate) struct Shared<T: UserEvent> {
@@ -25,7 +24,6 @@ pub(crate) struct Shared<T: UserEvent> {
     pub(crate) events: Mutex<VecDeque<RunEvent<T>>>,
     pub(crate) windows: Mutex<HashMap<WindowId, Arc<WindowInner<T>>>>,
     pub(crate) next_window_id: AtomicU32,
-    pub(crate) next_event_id: AtomicU32,
     pub(crate) theme: Mutex<Option<Theme>>,
     pub(crate) exiting: AtomicBool,
     pub(crate) exit_code: AtomicI32,
@@ -41,7 +39,6 @@ impl<T: UserEvent> Shared<T> {
             events: Mutex::new(VecDeque::new()),
             windows: Mutex::new(HashMap::new()),
             next_window_id: AtomicU32::new(1),
-            next_event_id: AtomicU32::new(1),
             theme: Mutex::new(None),
             exiting: AtomicBool::new(false),
             exit_code: AtomicI32::new(0),
@@ -51,10 +48,6 @@ impl<T: UserEvent> Shared<T> {
 
     pub(crate) fn is_main_thread(&self) -> bool {
         sys::current_thread_id() == self.main_thread
-    }
-
-    pub(crate) fn next_event_id(&self) -> u32 {
-        self.next_event_id.fetch_add(1, Ordering::SeqCst)
     }
 
     /// Creates the hidden wake-up window. Must run on the main thread.

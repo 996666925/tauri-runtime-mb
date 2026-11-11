@@ -1,6 +1,5 @@
 //! Native window creation and the [`WindowDispatch`] implementation.
 
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -13,12 +12,12 @@ use tauri_runtime::window::{
 };
 use tauri_runtime::{
     Error, Icon, ProgressBarState, ResizeDirection, Result, UserAttentionType, UserEvent,
-    WindowDispatch, WindowEventId,
+    WindowDispatch,
 };
 use tauri_utils::config::{Color, WindowConfig};
 use tauri_utils::{Theme, TitleBarStyle};
 
-use crate::shared::{EventHandler, Shared};
+use crate::shared::Shared;
 use crate::sys;
 use crate::webview::{WebviewInner, create_webview_in_window};
 use crate::window_frame;
@@ -471,7 +470,6 @@ pub(crate) struct WindowInner<T: UserEvent> {
     pub(crate) ime_caret: Mutex<Option<crate::ime::Caret>>,
 
     pub(crate) webview: Mutex<Option<Arc<WebviewInner<T>>>>,
-    pub(crate) handlers: Mutex<HashMap<WindowEventId, EventHandler>>,
 }
 
 impl<T: UserEvent> WindowInner<T> {
@@ -501,18 +499,8 @@ impl<T: UserEvent> WindowInner<T> {
         self.webview.lock().unwrap().take()
     }
 
-    /// Delivers a window event to the registered listeners and to the run loop.
+    /// Sends a window event to Tauri, which dispatches its registered listeners.
     pub(crate) fn emit(&self, event: WindowEvent) {
-        let handlers: Vec<EventHandler> = {
-            let handlers = self.handlers.lock().unwrap();
-            handlers.values().cloned().collect()
-        };
-
-        for handler in handlers {
-            let callback = handler.lock().unwrap();
-            callback(&event);
-        }
-
         self.shared.push_event(tauri_runtime::RunEvent::WindowEvent {
             label: self.label.clone(),
             event,
@@ -704,7 +692,6 @@ pub(crate) fn create_window<T: UserEvent, F: Fn(RawWindow<'_>) + Send + 'static>
         ime_composing: AtomicBool::new(false),
         ime_caret: Mutex::new(None),
         webview: Mutex::new(None),
-        handlers: Mutex::new(HashMap::new()),
     });
 
     {
@@ -1075,16 +1062,6 @@ impl<T: UserEvent> WindowDispatch<T> for MbWindowDispatcher<T> {
     fn run_on_main_thread<F: FnOnce() + Send + 'static>(&self, f: F) -> Result<()> {
         self.inner.shared.post_task(Box::new(f));
         Ok(())
-    }
-
-    fn on_window_event<F: Fn(&WindowEvent) + Send + 'static>(&self, f: F) -> WindowEventId {
-        let id = self.inner.shared.next_event_id();
-        self.inner
-            .handlers
-            .lock()
-            .unwrap()
-            .insert(id, Arc::new(Mutex::new(Box::new(f))));
-        id
     }
 
     fn scale_factor(&self) -> Result<f64> {

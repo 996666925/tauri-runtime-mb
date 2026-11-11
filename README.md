@@ -68,7 +68,7 @@ cargo build -p miniblink-app --release --locked --target-dir target
 
 ```toml
 [dependencies]
-tauri = "3.0.0-alpha.4"
+tauri = "3.0.0-alpha.6"
 tauri-runtime-mb = "0.0.1"
 
 [build-dependencies]
